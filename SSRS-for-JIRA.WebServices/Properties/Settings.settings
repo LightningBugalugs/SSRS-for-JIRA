@@ -1,0 +1,21 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="SSRS_for_JIRA.WebServices.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="JiraUsername" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">[JiraUsername]</Value>
+    </Setting>
+    <Setting Name="JiraPassword" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">[JiraPassword]</Value>
+    </Setting>
+    <Setting Name="JiraRestApiUrl" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">[JiraInstanceUrl]/rest/</Value>
+    </Setting>
+    <Setting Name="JiraBoardId" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">[JiraBoardId]</Value>
+    </Setting>
+    <Setting Name="JiraComponentList" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">[semicolon;separated;component;list]</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
