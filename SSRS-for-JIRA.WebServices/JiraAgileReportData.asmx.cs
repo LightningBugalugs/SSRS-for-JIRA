@@ -112,7 +112,7 @@ namespace SSRS_for_JIRA.WebServices
 
                 foreach (var releaseIssue in releaseIssues)
                 {
-                    var releaseStatusReportItem = new ReleaseStatusReportItem() { IssueStatus = releaseIssue.IssueFields.Status.Name, 
+                    var releaseStatusReportItem = new ReleaseStatusReportItem() { IssueStatus = releaseIssue.IssueFields.Status.StatusName, 
                                                                                   ReleaseName = release.Name, 
                                                                                   StoryPoints = releaseIssue.IssueFields.StoryPoints };
                     if (releaseStatusReportItem.IssueStatus.ToLowerInvariant() == "proposed story")
@@ -127,6 +127,94 @@ namespace SSRS_for_JIRA.WebServices
             releaseStatusReport = releaseStatusReport.OrderByDescending(rsr => rsr.ReleaseName).ToList();
 
             return releaseStatusReport;
+        }
+
+        /// <summary>
+        /// <para>Get listing of release status report (one item per release)</para>
+        /// </summary>
+        /// <returns>
+        /// <para>Returns a list of releas status report items (one item per release)</para>
+        /// </returns>
+        [WebMethod]
+        public List<ReleaseStatusReportSummary> GetReleaseStatusReportSummaries()
+        {
+            var jiraAgileRawData = new JiraAgileRawData();
+
+            // get component data
+            var componentReportSummaries = new List<ComponentReportSummary>();
+            var components = Properties.Settings.Default.JiraComponentList.Split(';');
+            var componentReportData = this.GetComponentReportData();
+            foreach (var component in components)
+            {
+                jiraAgileRawData = new JiraAgileRawData();
+                var totalStories = jiraAgileRawData.GetComponentIssues(component);
+                var componentReportSummary = new ComponentReportSummary(component, componentReportData, totalStories);
+                componentReportSummaries.Add(componentReportSummary);
+            }
+
+            // get release data
+            var getReleasesJiraRestApiUrl = Properties.Settings.Default.JiraRestApiUrl + "agile/1.0/board/" + Properties.Settings.Default.JiraBoardId + "/version";
+            var xmlJiraApiResponse = JiraRestApiHelper.GetXmlJiraApiResponse(Properties.Settings.Default.JiraUsername, Properties.Settings.Default.JiraPassword, getReleasesJiraRestApiUrl);
+            jiraAgileRawData = new JiraAgileRawData();
+            var releaseStatusReport = new List<ReleaseStatusReportItem>();
+            foreach (XmlNode xmlNode in xmlJiraApiResponse.GetElementsByTagName("values"))
+            {
+                var releaseXml = "<Release>" + xmlNode.InnerXml + "</Release>";
+                var release = Release.DeserializeFromXml(releaseXml);
+
+                var releaseIssues = jiraAgileRawData.GetReleaseIssues(release.Name);
+                release.ReleaseIssues = releaseIssues;
+                var averageStoryPointAmount = 1.0m;
+                var averageStoryPointAmountCalc = (from ri in releaseIssues
+                                                   where ri.IssueFields.StoryPoints != String.Empty
+                                                   select Convert.ToDecimal(ri.IssueFields.StoryPoints)).ToList();
+                if (averageStoryPointAmountCalc.Count > 0)
+                {
+                    averageStoryPointAmount = (from ri in averageStoryPointAmountCalc select ri).Average();
+                    averageStoryPointAmount = Math.Round(averageStoryPointAmount, 3);
+                }
+
+                var remainingIssues = releaseIssues.Where(ri => ri.IssueFields.Status.StatusName.ToLowerInvariant() != "verified"
+                                                                && ri.IssueFields.Status.StatusName.ToLowerInvariant() != "resolved").ToList();
+                foreach (var remainingIssue in remainingIssues)
+                {
+                    var releaseStatusReportItem = new ReleaseStatusReportItem()
+                    {
+                        IssueStatus = remainingIssue.IssueFields.Status.StatusName,
+                        ReleaseName = release.Name,
+                        StoryPoints = remainingIssue.IssueFields.StoryPoints
+                    };
+                    if (releaseStatusReportItem.IssueStatus.ToLowerInvariant() == "proposed story")
+                    {
+                        releaseStatusReportItem.StoryPoints = averageStoryPointAmount.ToString();
+                    }
+                    releaseStatusReportItem.IssueStatusOrder = releaseStatusReportItem.IssueStatusOrderId;
+                    releaseStatusReport.Add(releaseStatusReportItem);
+                }
+            }
+            releaseStatusReport = releaseStatusReport.OrderByDescending(rsr => rsr.ReleaseName).ToList();
+
+            // combine component and release data for release status report summary
+            var overallVelocity = (from crs in componentReportSummaries
+                                   select crs.VelocityForComponentFourSprintCalc).Sum() / components.Count();
+            var releaseStatusReportSummaries = new List<ReleaseStatusReportSummary>();
+            var releases = (from rsri in releaseStatusReport
+                            select rsri.ReleaseName).Distinct().ToList();
+            foreach (var release in releases)
+            {
+                var releaseStatusReportSummary = new ReleaseStatusReportSummary();
+                releaseStatusReportSummary.ReleaseName = release;
+                releaseStatusReportSummary.StoryPoints = (from rsri in releaseStatusReport
+                                                            where rsri.ReleaseName == release 
+                                                                && !String.IsNullOrEmpty(rsri.StoryPoints)
+                                                            select Convert.ToDecimal(rsri.StoryPoints)).Sum().ToString();
+                var remainingSprints = Convert.ToDecimal(releaseStatusReportSummary.StoryPoints) / overallVelocity;
+                var remainingDays = Convert.ToInt32(remainingSprints * 14.0m);
+                releaseStatusReportSummary.EstimatedCompletion = DateTime.Now.AddDays(remainingDays);
+                releaseStatusReportSummaries.Add(releaseStatusReportSummary);
+            }
+
+            return releaseStatusReportSummaries;
         }
     }
 }

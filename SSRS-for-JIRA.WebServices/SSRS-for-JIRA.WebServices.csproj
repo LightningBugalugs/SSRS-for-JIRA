@@ -96,6 +96,7 @@
     </Compile>
     <Compile Include="ReportObjects\ComponentReportSummary.cs" />
     <Compile Include="ReportObjects\ReleaseStatusReportItem.cs" />
+    <Compile Include="ReportObjects\ReleaseStatusReportSummary.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />

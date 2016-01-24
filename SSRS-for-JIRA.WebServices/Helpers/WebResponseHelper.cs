@@ -21,6 +21,8 @@ namespace SSRS_for_JIRA.WebServices.Helpers
         public static string GetWebResponse(string username, string password, string url)
         {
             var responseText = String.Empty;
+            // add maxResults setting in the url provided
+            url = url.Contains("?") ? url.Replace("?", "?maxResults=1250&") : url + "?maxResults=1250";
 
             var httpWebRequest = WebRequest.Create(url) as HttpWebRequest;
             httpWebRequest.ContentType = "application/json";

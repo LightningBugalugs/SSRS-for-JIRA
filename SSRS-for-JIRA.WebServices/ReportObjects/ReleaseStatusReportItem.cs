@@ -42,7 +42,7 @@
                     case "proposed story":
                         issueStatusOrderId = 2;
                         break;
-                    case "pending external resource":
+                    case "on hold":
                         issueStatusOrderId = 3;
                         break;
                     case "open":
@@ -51,7 +51,7 @@
                     case "in progress":
                         issueStatusOrderId = 5;
                         break;
-                    case "in system/uat testing":
+                    case "in testing":
                         issueStatusOrderId = 6;
                         break;
                     case "verified":
