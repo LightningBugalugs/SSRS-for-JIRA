@@ -114,6 +114,7 @@ namespace SSRS_for_JIRA.WebServices
                 {
                     var releaseStatusReportItem = new ReleaseStatusReportItem() { IssueStatus = releaseIssue.IssueFields.Status.StatusName, 
                                                                                   ReleaseName = release.Name, 
+                                                                                  ReleaseDate = release.TargetReleaseDate,
                                                                                   StoryPoints = releaseIssue.IssueFields.StoryPoints };
                     if (releaseStatusReportItem.IssueStatus.ToLowerInvariant() == "proposed story")
                     {
@@ -173,16 +174,15 @@ namespace SSRS_for_JIRA.WebServices
                     averageStoryPointAmount = (from ri in averageStoryPointAmountCalc select ri).Average();
                     averageStoryPointAmount = Math.Round(averageStoryPointAmount, 3);
                 }
-
-                var remainingIssues = releaseIssues.Where(ri => ri.IssueFields.Status.StatusName.ToLowerInvariant() != "verified"
-                                                                && ri.IssueFields.Status.StatusName.ToLowerInvariant() != "resolved").ToList();
-                foreach (var remainingIssue in remainingIssues)
+                
+                foreach (var releaseIssue in releaseIssues)
                 {
                     var releaseStatusReportItem = new ReleaseStatusReportItem()
                     {
-                        IssueStatus = remainingIssue.IssueFields.Status.StatusName,
+                        IssueStatus = releaseIssue.IssueFields.Status.StatusName,
                         ReleaseName = release.Name,
-                        StoryPoints = remainingIssue.IssueFields.StoryPoints
+                        ReleaseDate = release.TargetReleaseDate,
+                        StoryPoints = releaseIssue.IssueFields.StoryPoints
                     };
                     if (releaseStatusReportItem.IssueStatus.ToLowerInvariant() == "proposed story")
                     {
@@ -200,17 +200,39 @@ namespace SSRS_for_JIRA.WebServices
             var releaseStatusReportSummaries = new List<ReleaseStatusReportSummary>();
             var releases = (from rsri in releaseStatusReport
                             select rsri.ReleaseName).Distinct().ToList();
+            var remainingStatuses = new List<string>() { "waiting for support", "on hold", "proposed story", "open", "in progress", "in testing" };
+            var completedStatuses = new List<string>() { "verified", "resolved" };
             foreach (var release in releases)
             {
                 var releaseStatusReportSummary = new ReleaseStatusReportSummary();
                 releaseStatusReportSummary.ReleaseName = release;
-                releaseStatusReportSummary.StoryPoints = (from rsri in releaseStatusReport
-                                                            where rsri.ReleaseName == release 
-                                                                && !String.IsNullOrEmpty(rsri.StoryPoints)
-                                                            select Convert.ToDecimal(rsri.StoryPoints)).Sum().ToString();
-                var remainingSprints = Convert.ToDecimal(releaseStatusReportSummary.StoryPoints) / overallVelocity;
+                releaseStatusReportSummary.StoryPointsTotal = (from rsri in releaseStatusReport
+                                                               where rsri.ReleaseName == release
+                                                                     && !String.IsNullOrEmpty(rsri.StoryPoints)
+                                                               select Convert.ToDecimal(rsri.StoryPoints)).Sum().ToString();
+                releaseStatusReportSummary.StoryPointsRemaining = (from rsri in releaseStatusReport
+                                                                   where rsri.ReleaseName == release
+                                                                         && !String.IsNullOrEmpty(rsri.StoryPoints)
+                                                                         && remainingStatuses.Contains(rsri.IssueStatus.ToLowerInvariant())
+                                                                   select Convert.ToDecimal(rsri.StoryPoints)).Sum().ToString();
+                releaseStatusReportSummary.StoryPointsCompleted = (from rsri in releaseStatusReport
+                                                                   where rsri.ReleaseName == release
+                                                                         && !String.IsNullOrEmpty(rsri.StoryPoints)
+                                                                         && completedStatuses.Contains(rsri.IssueStatus.ToLowerInvariant())
+                                                                   select Convert.ToDecimal(rsri.StoryPoints)).Sum().ToString();
+                releaseStatusReportSummary.PlannedCompletion = (from rsri in releaseStatusReport
+                                                                where rsri.ReleaseName == release
+                                                                select rsri.ReleaseDate).FirstOrDefault();
+
+                var remainingSprints = Convert.ToDecimal(releaseStatusReportSummary.StoryPointsRemaining) / overallVelocity;
                 var remainingDays = Convert.ToInt32(remainingSprints * 14.0m);
                 releaseStatusReportSummary.EstimatedCompletion = DateTime.Now.AddDays(remainingDays);
+                
+                var completionSprintDifferenceInDays = (releaseStatusReportSummary.PlannedCompletion - releaseStatusReportSummary.EstimatedCompletion).TotalDays;
+                var completionSprintDifferenceInSprints = completionSprintDifferenceInDays/14.0d;
+                releaseStatusReportSummary.CompletionSprintDifference = Convert.ToInt32(completionSprintDifferenceInSprints);
+                if (Convert.ToDecimal(releaseStatusReportSummary.StoryPointsRemaining) == 0m) { releaseStatusReportSummary.CompletionSprintDifference = 0; }
+
                 releaseStatusReportSummaries.Add(releaseStatusReportSummary);
             }
 

@@ -1,4 +1,6 @@
-﻿namespace SSRS_for_JIRA.WebServices.ReportObjects
+﻿using System;
+
+namespace SSRS_for_JIRA.WebServices.ReportObjects
 {
     /// <summary>
     /// <para>Line item object for relese status report</para>
@@ -9,7 +11,12 @@
         /// <para>The name of the release</para>
         /// </summary>
         public string ReleaseName { get; set; }
-        
+
+        /// <summary>
+        /// <para>The planned release date for the release</para>
+        /// </summary>
+        public DateTime ReleaseDate { get; set; }
+
         /// <summary>
         /// <para>The status the issue is currently in</para>
         /// </summary>
@@ -23,7 +30,7 @@
         /// <summary>
         /// <para>Number of story points for the issue</para>
         /// </summary>
-        public string StoryPoints { get; set; }        
+        public string StoryPoints { get; set; }
 
         /// <summary>
         /// <para>Calcuated field to generate a status order Id used for ordering the issues</para>
@@ -39,10 +46,10 @@
                     case "waiting for support":
                         issueStatusOrderId = 1;
                         break;
-                    case "proposed story":
+                    case "on hold":
                         issueStatusOrderId = 2;
                         break;
-                    case "on hold":
+                    case "proposed story":
                         issueStatusOrderId = 3;
                         break;
                     case "open":
