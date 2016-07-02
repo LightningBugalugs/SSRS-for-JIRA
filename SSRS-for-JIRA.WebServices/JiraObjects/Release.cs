@@ -24,6 +24,20 @@ namespace SSRS_for_JIRA.WebServices.JiraObjects
         [XmlElement("releaseDate")]
         public DateTime TargetReleaseDate { get; set; }
 
+        public string DescriptionDisplayText
+        {
+            get
+            {
+                var splitCharacters = new char[] { ',', ';'};
+                var descriptionDisplayText = new StringBuilder();
+                foreach (var splitDescription in this.Description.Split(splitCharacters, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    descriptionDisplayText.AppendLine(splitDescription);
+                }
+                return descriptionDisplayText.ToString();
+            }
+        }
+
         /// <summary>
         /// <para>Issues related to the release.</para>
         /// </summary>

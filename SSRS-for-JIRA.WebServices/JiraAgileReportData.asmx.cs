@@ -55,6 +55,38 @@ namespace SSRS_for_JIRA.WebServices
         }
 
         /// <summary>
+        /// <para>Get Report Data by Component for use in Velocity Reporting Charts (basically one line per sprint per component)</para>
+        /// </summary>
+        /// <returns>
+        /// <para>Returns a list of Component Report line items (basically one line per sprint per component)</para>
+        /// </returns>
+        [WebMethod]
+        public List<ComponentReport> GetRecentComponentReportData()
+        {
+            var jiraAgileRawData = new JiraAgileRawData();
+            var componentReports = new List<ComponentReport>();
+
+            // get all sprint data
+            var sprints = jiraAgileRawData.GetSprints().OrderByDescending(s => s.Id).Take(10).ToList();
+
+            // get components to process
+            var components = Properties.Settings.Default.JiraComponentList.Split(';');
+
+            // create a component report for each component/sprint
+            foreach (var component in components)
+            {
+                // for each sprint get listing of issues
+                foreach (var sprint in sprints)
+                {
+                    var componentReport = new ComponentReport(component, sprint.Id, sprint.Name, sprints);
+                    componentReports.Add(componentReport);
+                }
+            }
+
+            return componentReports;
+        }
+
+        /// <summary>
         /// <para>Get a summary of velocities and data for all components</para>
         /// </summary>
         /// <returns>
@@ -75,7 +107,7 @@ namespace SSRS_for_JIRA.WebServices
                 var componentReportSummary = new ComponentReportSummary(component, componentReportData, totalStories);
                 componentReportSummaries.Add(componentReportSummary);
             }
-
+            
             return componentReportSummaries;
         }
 
@@ -113,7 +145,7 @@ namespace SSRS_for_JIRA.WebServices
                 foreach (var releaseIssue in releaseIssues)
                 {
                     var releaseStatusReportItem = new ReleaseStatusReportItem() { IssueStatus = releaseIssue.IssueFields.Status.StatusName, 
-                                                                                  ReleaseName = release.Name, 
+                                                                                  ReleaseName = release.Name + System.Environment.NewLine + release.DescriptionDisplayText, 
                                                                                   ReleaseDate = release.TargetReleaseDate,
                                                                                   StoryPoints = releaseIssue.IssueFields.StoryPoints };
                     if (releaseStatusReportItem.IssueStatus.ToLowerInvariant() == "proposed story")
